@@ -62,7 +62,7 @@ export default function Home() {
   // Memoized computation for filtering countries based on the search term
   const memoizedFilteredData = useMemo(() => {
     if (!loading && error == undefined && data.countries) {
-      return data.countries.filter((country: any) =>
+      return data.countries.filter((country: CountryProps) =>
         country.name.common.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }

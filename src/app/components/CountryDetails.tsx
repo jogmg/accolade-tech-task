@@ -3,6 +3,31 @@
 import { gql, useQuery } from "@apollo/client";
 import Image from "next/image";
 
+export interface CountryProps {
+  name: {
+    common: string;
+  };
+  capital: string;
+  population: number;
+  flags: {
+    svg: string;
+    alt: string;
+  };
+  area: number;
+  currencies: {
+    [key: string]: {
+      name: string;
+      symbol: string;
+    };
+  };
+  subregion: string;
+  continents: string[];
+  languages: {
+    [key: string]: string;
+  };
+  timezones: string[];
+}
+
 export default function CountryDetails({ slug }: { slug: string }) {
   // GraphQL query to fetch country details using the provided slug
   const GET_COUNTRY = gql`
@@ -36,7 +61,7 @@ export default function CountryDetails({ slug }: { slug: string }) {
   const { loading, error, data } = useQuery(GET_COUNTRY);
 
   // Extract the first country object from the response data
-  const country = data?.country[0];
+  const country: CountryProps = data?.country[0];
 
   // Display loading state while the query is in progress
   if (loading) return "Loading...";
@@ -72,7 +97,8 @@ export default function CountryDetails({ slug }: { slug: string }) {
           <p className="title">Currency</p>
           <p>
             {Object.values(country.currencies).map(
-              (currency: any) => `${currency.name} (${currency.symbol})`
+              (currency: { name: string; symbol: string }) =>
+                `${currency.name} (${currency.symbol})`
             ) || "N/A"}
           </p>
         </div>
@@ -86,7 +112,7 @@ export default function CountryDetails({ slug }: { slug: string }) {
           <p className="title">Language(s)</p>
           <p>
             {Object.values(country.languages)
-              .map((language: any) => `${language}`)
+              .map((language: string) => `${language}`)
               .join(", ") || "N/A"}
           </p>
         </div>
