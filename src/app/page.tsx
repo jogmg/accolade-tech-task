@@ -1,103 +1,181 @@
+"use client";
+
+import { gql, useQuery } from "@apollo/client";
+import Button from "./components/Button";
+import SearchBar from "./components/SearchBar";
+import { useEffect, useMemo, useState } from "react";
+import CompareOverlay from "./components/CompareOverlay";
 import Image from "next/image";
+import Link from "next/link";
+
+export interface CountryProps {
+  name: {
+    common: string;
+  };
+  capital: string;
+  population: number;
+  flags: {
+    svg: string;
+    alt: string;
+  };
+  area: number;
+}
+
+export interface CountriesCountryProps {
+  countries: CountryProps[];
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  // State for the search term entered in the search bar
+  const [searchTerm, setSearchTerm] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // State for the filtered list of countries based on the search term
+  const [filteredData, setFilteredData] = useState([]);
+
+  // State for the list of selected countries for comparison
+  const [selectedCountry, setSelectedCountry] = useState<CountryProps[]>([]);
+
+  // State to control the visibility of the compare overlay
+  const [active, setIsActive] = useState(false);
+
+  // GraphQL query to fetch the list of countries
+  const GET_COUNTRIES = gql`
+    query GetCountries {
+      countries @rest(type: "Country", path: "all", endpoint: "v1") {
+        name {
+          common
+        }
+        capital
+        population
+        flags {
+          svg
+          alt
+        }
+        area
+      }
+    }
+  `;
+
+  // Apollo useQuery hook to fetch data using the GraphQL query
+  const { loading, error, data } = useQuery(GET_COUNTRIES);
+
+  // Memoized computation for filtering countries based on the search term
+  const memoizedFilteredData = useMemo(() => {
+    if (!loading && error == undefined && data.countries) {
+      return data.countries.filter((country: any) =>
+        country.name.common.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    return [];
+  }, [searchTerm, data, loading, error]);
+
+  // Effect to update the filtered data whenever the memoized filtered data changes
+  useEffect(() => {
+    setFilteredData(memoizedFilteredData);
+  }, [memoizedFilteredData]);
+
+  // Function to add a country to the selected countries list
+  const addSelectedCountry = (country: CountryProps) => {
+    setSelectedCountry((prev) => {
+      return [...prev, country];
+    });
+  };
+
+  // Function to remove a country from the selected countries list
+  const removeSelectedCountry = (country: CountryProps) => {
+    setSelectedCountry((prev) => {
+      return prev.filter((name) => name.name.common !== country.name.common);
+    });
+  };
+
+  // Display loading or error messages if applicable
+  if (loading) return "Loading...";
+  if (error) return `Error! ${error.message}`;
+
+  return (
+    <main className="countries-table-container">
+      {/* Search bar component for filtering countries */}
+      <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+
+      {/* Table displaying the list of countries */}
+      <div className="table">
+        <div className="table-heading">
+          <div className="table-head-data flag">Flag</div>
+          <div className="table-head-data country">Country</div>
+          <div className="table-head-data capital">Capital</div>
+          <div className="table-head-data population">Population</div>
+          <div className="table-head-data area">Area</div>
+          <div className="table-head-data"></div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        <div className="table-body">
+          {/* Map through filtered data or fetched countries to render rows */}
+          {(filteredData || data.countries).map((country: CountryProps) => (
+            <div
+              className={`table-items ${
+                selectedCountry.some(
+                  (selected) => selected.name.common === country.name.common
+                )
+                  ? "selected"
+                  : ""
+              }`}
+              key={country.name.common}
+              onClick={() => {
+                if (
+                  selectedCountry.some(
+                    (selected) => selected.name.common === country.name.common
+                  )
+                ) {
+                  removeSelectedCountry(country);
+                } else {
+                  addSelectedCountry(country);
+                }
+              }}
+            >
+              {/* Country flag */}
+              <div className="table-data flag">
+                <Image
+                  src={country.flags.svg}
+                  alt={country.flags.alt || country.name.common + " flag"}
+                  width={50}
+                  height={50}
+                />
+              </div>
+              {/* Country name */}
+              <div className="table-data country">
+                {country.name.common || "N/A"}
+              </div>
+              {/* Country capital */}
+              <div className="table-data capital">
+                {country.capital || "N/A"}
+              </div>
+              {/* Country population */}
+              <div className="table-data population">
+                {country.population || "N/A"}
+              </div>
+              {/* Country area */}
+              <div className="table-data area">{country.area || "N/A"}</div>
+              {/* Link to view more details about the country */}
+              <div className="table-data view">
+                <Link href={`country/${country.name.common}`}>View</Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Button to trigger the compare overlay */}
+      <Button
+        text="Compare"
+        action={setIsActive}
+        selectedCountries={selectedCountry}
+      />
+
+      {/* Overlay component for comparing selected countries */}
+      <CompareOverlay
+        selectedCountry={selectedCountry}
+        active={active}
+        setIsActive={setIsActive}
+      />
+    </main>
   );
 }
